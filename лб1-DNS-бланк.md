@@ -10,12 +10,12 @@
 
 | Поле | Значення |
 |---|---|
-| ПІБ | |
-| Група | |
-| Ідентифікатор (`sNN`) | |
-| Дата виконання | |
-| Середовище | <!-- GitHub Codespaces або інше; якщо інше, вказати яке --> |
-| Версія `dig` | <!-- перший рядок виводу команди dig -v у терміналі стенда --> |
+| ПІБ | Пікульський Олександр Дмитрович |
+| Група | F5-2.01 |
+| Ідентифікатор (`sNN`) | cs-201-16 |
+| Дата виконання |  21.10.2026 |
+| Середовище | GitHub Codespaces |
+| Версія `dig` | 9.18.39-0ubuntu0.24.04.8-Ubuntu |
 
 ## Параметри варіанта
 
@@ -23,14 +23,14 @@
 
 | Параметр | Значення |
 |---|---|
-| `$TTL`, с | |
-| TTL запису SOA, с | |
-| Поле `minimum` SOA, с | |
-| Псевдонім (CNAME на `www`) | |
-| Другий хост і його TTL, с | |
-| Пріоритет MX | |
-| Токен TXT | |
-| Ім'я для завдання 5 | |
+| `$TTL`, с | 120 |
+| TTL запису SOA, с | 45 |
+| Поле `minimum` SOA, с | 40 |
+| Псевдонім (CNAME на `www`) | docs |
+| Другий хост і його TTL, с | preview, 35 с |
+| Пріоритет MX | 10 |
+| Токен TXT | lab-token=cddadb0f |
+| Ім'я для завдання 5 | new-oynth.cs-201-16.lab |
 
 ## Завдання 1. Складові URI
 
@@ -40,125 +40,333 @@
 
 | № | scheme | userinfo | host | port | path | query | fragment |
 |---|---|---|---|---|---|---|---|
-| 1 | | | | | | | |
-| 2 | | | | | | | |
-| 3 | | | | | | | |
-| 4 | | | | | | | |
-| 5 | | | | | | | |
+| 1 | http | - | www.cs-201-16.lab | 80 (за замовч.) | - | lang=46&q=uk/reports/search | results |
+| 2 | http | - | docs.cs-201-16.lab | 80 (вказано явно) | /search/ | lang=%D0%BA%D0%B8%D1%97%D0%B2 | - |
+| 3 | http | user | preview.cs-201-16.lab | 80 (за замовч.) | /reports | - | summary |
+| 4 | http | - | www.cs-201-16.lab | 8443 | /reports/../search | - | - |
+| 5 | mailto | - | - | - | admin@cs-201-16.lab | subject=reports | - |
 
 | № | Ім'я, що запитується в DNS | Заголовок `Host` | Ціль запиту (request target) |
 |---|---|---|---|
-| 1 | | | |
-| 2 | | | |
-| 3 | | | |
-| 4 | | | |
-| 5 | | | |
+| 1 | www.cs-201-16.lab | www.cs-201-16.lab | /reports/search?lang=46&q=uk |
+| 2 | docs.cs-201-16.lab | docs.cs-201-16.lab | /search/?lang=%D0%BA%D0%B8%D1%97%D0%B2 |
+| 3 | preview.cs-201-16.lab | preview.cs-201-16.lab | /reports |
+| 4 | www.cs-201-16.lab | www.cs-201-16.lab:8443 | /reports/../search |
+| 5 |  - | - | - |
 
 Декодоване значення параметра URI 2:
 
+```
+Параметр lang=%D0%BA%D0%B8%D1%97%D0%B2 після декодування має значення «київ». Символи були закодовані у форматі percent-encoding з використанням UTF-8.
+```
+
 Чому URI 5 не має складової host, хоча містить символ `@`:
+
+```
+URI 5 використовує схему mailto, яка призначена для електронної пошти, а не для HTTP-запитів. Адреса admin@cs-201-16.lab є частиною path. Символ @ розділяє ім'я поштової скриньки та поштовий домен, тому складова host відсутня.
+```
 
 ### 1.2. Перевірка (після завдання 3)
 
 <!-- Для URI 1–3: рядки запиту (починаються з ">") і тіло відповіді сервера. -->
 
-```text
+URI 1:
+```
+> GET /reports/search?lang=46&q=uk HTTP/1.1
+> Host: www.cs-201-16.lab
 
+< HTTP/1.1 200 OK
+
+server: web-a
+Host: www.cs-201-16.lab
+request URI: /reports/search?lang=46&q=uk
+path: /reports/search
+query: lang=46&q=uk
+client: 10.53.1.1
+```
+
+URI 2:
+```
+> GET /search/?lang=%D0%BA%D0%B8%D1%97%D0%B2 HTTP/1.1
+> Host: docs.cs-201-16.lab
+
+< HTTP/1.1 200 OK
+
+server: web-a
+Host: docs.cs-201-16.lab
+request URI: /search/?lang=%D0%BA%D0%B8%D1%97%D0%B2
+path: /search/
+query: lang=%D0%BA%D0%B8%D1%97%D0%B2
+client: 10.53.1.1
+```
+
+URI 3:
+```
+> GET /reports HTTP/1.1
+> Host: preview.cs-201-16.lab
+> Authorization: Basic dXNlcjpwYXNz
+
+< HTTP/1.1 200 OK
+
+server: web-b
+Host: preview.cs-201-16.lab
+request URI: /reports
+path: /reports
+query:
+client: 10.53.1.1
 ```
 
 Значення заголовка `Authorization` і результат декодування:
 
-```text
+```
+Authorization: Basic dXNlcjpwYXNz
 
+Команда:
+echo 'dXNlcjpwYXNz' | base64 -d
+
+Результат декодування:
+user:pass
 ```
 
 URI 4: етап, на якому запит не вдається (пошук імені / TCP / TLS), і рядки виводу, що це підтверджують:
 
-```text
+DNS успішно визначив IP-адресу 10.53.0.80, але TCP-з'єднання з портом 8443 було відхилено (Connection refused). Отже, помилка виникла на етапі встановлення TCP-з'єднання, а не DNS або TLS.
 
+```
+* Host www.cs-201-16.lab:8443 was resolved.
+* IPv6: (none)
+* IPv4: 10.53.0.80
+*   Trying 10.53.0.80:8443...
+* connect to 10.53.0.80 port 8443 from 10.53.1.1 port 41504 failed: Connection refused
+* Failed to connect to www.cs-201-16.lab port 8443 after 0 ms: Couldn't connect to server
+curl: (7) Failed to connect to www.cs-201-16.lab port 8443 after 0 ms: Couldn't connect to server
 ```
 
 | Запит | `request URI`, отриманий сервером | `path`, отриманий сервером |
 |---|---|---|
-| звичайний | | |
-| `--path-as-is` | | |
+| звичайний | /search | /search |
+| `--path-as-is` | /reports/../search | /search |
 
 Розбіжності між URI та тим, що отримав сервер, і їх пояснення:
 
+Під час перевірки URI 1–3 усі сервери успішно обробили HTTP-запити та повернули статус 200 OK.
+
+У URI 1 та URI 3 фрагменти #results і #summary не передавалися серверу, оскільки фрагменти URI обробляються на стороні клієнта.
+
+У URI 2 параметр lang передавався в закодованому вигляді. Також у заголовку Host не було вказано порт 80, оскільки це стандартний порт HTTP.
+
+У URI 3 логін і пароль були передані через заголовок Authorization, а не через заголовок Host.
+
+У URI 4 DNS працював правильно, але TCP-з'єднання з портом 8443 було відхилено.
+
+Під час звичайного запиту curl автоматично нормалізував шлях /reports/../search до /search. З параметром --path-as-is він передав початковий шлях без змін, але вебсервер сам нормалізував його до /search.
+
+Отже, результати перевірки підтвердили правильність розбору URI та показали, які його складові передаються HTTP-серверу.
+
 ## Завдання 2. Проходження ієрархії вручну
 
-```text
+```
+Команда 1:
+dig @10.53.0.2 ns.cs-201-16.lab A +norec
 
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 30408
+;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 2
+
+;; AUTHORITY SECTION:
+lab.                    172800  IN  NS  ns1.nic.lab.
+
+;; ADDITIONAL SECTION:
+ns1.nic.lab.            172800  IN  A   10.53.0.3
+
+;; Query time: 79 msec
+;; SERVER: 10.53.0.2#53(10.53.0.2) (UDP)
+
+Команда 2:
+dig @10.53.0.3 ns.cs-201-16.lab A +norec
+
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 64610
+;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 2
+
+;; AUTHORITY SECTION:
+cs-201-16.lab.          3600  IN  NS  ns.cs-201-16.lab.
+
+;; ADDITIONAL SECTION:
+ns.cs-201-16.lab.       3600  IN  A   10.53.1.1
+
+;; Query time: 80 msec
+;; SERVER: 10.53.0.3#53(10.53.0.3) (UDP)
+
+Команда 3:
+dig @10.53.1.1 ns.cs-201-16.lab A +norec
+
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 18014
+;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 1
+
+;; ANSWER SECTION:
+ns.cs-201-16.lab.       120  IN  A   10.53.1.1
+
+;; AUTHORITY SECTION:
+cs-201-16.lab.          120  IN  NS  ns.cs-201-16.lab.
+
+;; Query time: 0 msec
+;; SERVER: 10.53.1.1#53(10.53.1.1) (UDP)
 ```
 
 | Сервер | status | flags | ANSWER | AUTHORITY | ADDITIONAL |
 |---|---|---|---|---|---|
-| 10.53.0.2 | | | | | |
-| 10.53.0.3 | | | | | |
-| 10.53.1.1 | | | | | |
+| 10.53.0.2 | NOERROR | qr | 0 | 1 NS: lab. → ns1.nic.lab. | 2: A 10.53.0.3 та OPT |
+| 10.53.0.3 | NOERROR | qr | 0 | 1 NS: cs-201-16.lab. → ns.cs-201-16.lab.  | 2: A 10.53.1.1 та OPT |
+| 10.53.1.1 | NOERROR | qraa | 1 A:10.53.1.1 | 1 NS: ns.cs-201-16.lab. | 1 OPT |
 
 Вивід `dig ns.sNN.lab A +trace`:
 
-```text
-
 ```
+; <<>> DiG 9.18.39-0ubuntu0.24.04.8-Ubuntu <<>> ns.cs-201-16.lab A +trace
+;; global options: +cmd
+
+.                       85855   IN  NS  a.root-servers.net.
+;; Received 59 bytes from 10.53.0.53#53(10.53.0.53) in 0 ms
+
+lab.                    172800  IN  NS  ns1.nic.lab.
+;; Received 117 bytes from 10.53.0.2#53(a.root-servers.net) in 80 ms
+
+cs-201-16.lab.          3600    IN  NS  ns.cs-201-16.lab.
+;; Received 103 bytes from 10.53.0.3#53(ns1.nic.lab) in 40 ms
+
+ns.cs-201-16.lab.       120     IN  A   10.53.1.1
+cs-201-16.lab.          120     IN  NS  ns.cs-201-16.lab.
+;; Received 103 bytes from 10.53.1.1#53(ns.cs-201-16.lab) in 0 ms
+```
+Порівняння результатів:
+
+Команда +trace показала такий самий ланцюжок DNS-запитів, як і під час ручної перевірки:
+
+1. Кореневий сервер 10.53.0.2 вказав на сервер зони lab.
+
+2. TLD-сервер 10.53.0.3 вказав на авторитативний сервер моєї зони.
+
+3. Власний сервер 10.53.1.1 повернув IP-адресу 10.53.1.1.
+
+Отже, ручна перевірка та трасування підтвердили правильність роботи DNS-ієрархії.
 
 | Запит | TTL запису NS | Прапорець `aa` | Секція, у якій міститься NS |
 |---|---|---|---|
-| `dig @10.53.0.3 sNN.lab NS +norec` | | | |
-| `dig @10.53.1.1 sNN.lab NS +norec` | | | |
+| `dig @10.53.0.3 sNN.lab NS +norec` | 3600 с | Немає | AUTHORITY |
+| `dig @10.53.1.1 sNN.lab NS +norec` | 120 с | Є | ANSWER |
 
 1. Які відповіді є відсиланнями і за якими ознаками це визначено?
 
+Відсиланнями є відповіді серверів 10.53.0.2 і 10.53.0.3, тому що в них немає ANSWER, а в AUTHORITY вказано наступний DNS-сервер.
+
 2. Для чого у відповіді TLD присутній запис у секції ADDITIONAL і що сталося б, якби його не було?
 
+Він містить IP-адресу наступного DNS-сервера. Без нього резолверу було б складніше знайти потрібний сервер.
+
 3. Яка з двох копій запису NS є авторитативною і чому?
+
+Авторитативною є копія на сервері 10.53.1.1, тому що він відповідає за мою зону і має прапорець aa.
 
 ## Завдання 3. Заповнення власної зони
 
 Вивід `zone-reload`:
 
-```text
-
+```
+zone cs-201-16.lab/IN: loaded serial 2026102102
+OK
+zone reload queued
 ```
 
 <!-- Шість запитів до 10.53.1.1 з +norec, по одному на кожен рядок таблиці картки. -->
 
+Команди перевірки:
+
+dig @10.53.1.1 www.cs-201-16.lab A +norec
+dig @10.53.1.1 docs.cs-201-16.lab CNAME +norec
+dig @10.53.1.1 mail.cs-201-16.lab A +norec
+dig @10.53.1.1 cs-201-16.lab MX +norec
+dig @10.53.1.1 cs-201-16.lab TXT +norec
+dig @10.53.1.1 preview.cs-201-16.lab A +norec
+
+Усі записи повернули NOERROR та прапорець aa, отже DNS-зона працює правильно.
+
 | Запис | status | Прапорець `aa` | Значення в ANSWER | TTL | Відповідає картці (так/ні) |
 |---|---|---|---|---|---|
-| `www` A | | | | | |
-| псевдонім CNAME | | | | | |
-| `mail` A | | | | | |
-| `@` MX | | | | | |
-| `@` TXT | | | | | |
-| другий хост A | | | | | |
+| `www` A | NOERROR | Так | 10.53.0.80 | 120 | Так |
+| docs CNAME | NOERROR | Так | www.cs-201-16.lab. | 120 | Так |
+| `mail` A | NOERROR | Так | 10.53.0.80 | 120 | Так |
+| `@` MX | NOERROR | Так | 10 mail.cs-201-16.lab. | 120 | Так |
+| `@` TXT | NOERROR | Так | "lab-token=cddadb0f" | 120 | Так |
+| preview A | NOERROR | Так | 10.53.0.81 | 35 | Так |
 
 Порівняння відповідей резолвера та власного сервера:
 
-```text
+```
+Команда: dig docs.cs-201-16.lab
 
+;; flags: qr rd ra; QUERY: 1, ANSWER: 2, AUTHORITY: 0, ADDITIONAL: 1
+
+;; ANSWER SECTION:
+docs.cs-201-16.lab.  33  IN CNAME www.cs-201-16.lab.
+www.cs-201-16.lab.   33  IN A     10.53.0.80
+
+Команда: dig @10.53.1.1 docs.cs-201-16.lab +norec
+
+;; flags: qr aa; QUERY: 1, ANSWER: 2, AUTHORITY: 1, ADDITIONAL: 2
+
+;; ANSWER SECTION:
+docs.cs-201-16.lab.  120 IN CNAME www.cs-201-16.lab.
+www.cs-201-16.lab.   120 IN A     10.53.0.80
+
+Команда: dig cs-201-16.lab MX
+
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; ANSWER SECTION:
+cs-201-16.lab.  120 IN MX 10 mail.cs-201-16.lab.
+
+Команда: dig @10.53.1.1 cs-201-16.lab MX +norec
+
+;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 1, ADDITIONAL: 3
+
+;; ANSWER SECTION:
+cs-201-16.lab.  120 IN MX 10 mail.cs-201-16.lab.
 ```
 
 | Запит | flags | ANSWER (кількість, типи) | AUTHORITY (кількість, типи) | ADDITIONAL (кількість, типи) | TTL |
 |---|---|---|---|---|---|
-| псевдонім через resolver-a | | | | | |
-| псевдонім через 10.53.1.1 | | | | | |
-| MX через resolver-a | | | | | |
-| MX через 10.53.1.1 | | | | | |
+| docs через resolver-a | qr rd ra | 2: CNAME, A | 0 | 1 OPT | 33c |
+| docs  через 10.53.1.1 | qr aa | 2: CNAME, A | 1 NS | 1 A + OPT | 120 c |
+| MX через resolver-a | qr rd ra | 1 MX | 0 | 1 OPT | 120 c |
+| MX через 10.53.1.1 | qr aa | 1 MX | 1 NS | 2 A + OPT | 120 c|
 
 Пояснення відмінностей:
 
+Резолвер повертає прапорці qr rd ra, а власний сервер — qr aa, тому що він є авторитативним. TTL запису docs через резолвер становив 33 секунди замість 120, оскільки запис уже був у кеші.
+
 Повідомлення `zone-check` після тимчасового додавання `@ IN CNAME www`:
 
-```text
+```
+dns_master_load: /lab/zone/cs-201-16.lab.zone:21: cs-201-16.lab: CNAME and other data
+zone cs-201-16.lab/IN: loading from master file /lab/zone/cs-201-16.lab.zone failed: CNAME and other data
+zone cs-201-16.lab/IN: not loaded due to errors.
 
+Після видалення неправильного запису:
+
+zone cs-201-16.lab/IN: loaded serial 2026102102
+OK
 ```
 
 1. Який TTL має кожен запис зони і звідки це значення взято?
 
+Більшість записів мають TTL 120 секунд із $TTL. Для preview задано 35 секунд, а для SOA — 45 секунд. Ці значення взяті з моєї картки варіанта.
+
 2. Скільки записів містить секція ANSWER у відповіді на запит псевдоніма і чому?
 
+Два записи: CNAME і A. Перший вказує на www.cs-201-16.lab, а другий містить його IP-адресу 10.53.0.80.
+
 3. Чому запис CNAME неможливо розмістити для імені `@`?
+
+Тому що @ вже має записи SOA, NS, MX і TXT. CNAME не може існувати разом з іншими записами для одного імені. Це підтвердила помилка CNAME and other data.
 
 ## Завдання 4. TTL і видимість змін
 
